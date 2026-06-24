@@ -51,4 +51,4 @@ All good. / N issue(s) found.
 | Daemon not running | `tsm daemon start` |
 | Embedder down | Check logs in `{state_dir}/logs/` |
 | Vectors stale | `tsm backfill` to re-queue |
-| DB corrupt | `tsm rebuild --force` |
+| DB corrupt | `tsm rebuild --apply` |
