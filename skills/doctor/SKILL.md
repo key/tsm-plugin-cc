@@ -31,6 +31,7 @@ Parse the JSON and present like this:
 ```text
 ### The Space Memory — Doctor
 
+✔ Version: v0.6.0 (built 2026-06-24)
 ✔ Daemon: running (pid 1234)
 ✔ Embedder: running (pid 5678)
 ✔ Database: 1,234 chunks, 1,200 vectors
@@ -43,6 +44,9 @@ All good. / N issue(s) found.
 - status "ok" → ✔
 - status "warning" → ⚠ (show hint)
 - status "error" → ✘ (show hint)
+- The `Build` section (`Version` / `Built`) identifies the running binary —
+  surface it so a stale `tsm` is obvious (requires tsm ≥ the release adding it;
+  older binaries simply omit the section)
 
 ## Troubleshooting
 
