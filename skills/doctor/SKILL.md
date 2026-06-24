@@ -34,7 +34,7 @@ Parse the JSON and present like this:
 ✔ Daemon: running (pid 1234)
 ✔ Embedder: running (pid 5678)
 ✔ Database: 1,234 chunks, 1,200 vectors
-⚠ Backfill: 34 chunks pending (hint: run `tsm backfill`)
+⚠ Backfill: 34 chunks pending (hint: run `tsm vector-fill`)
 ✘ Socket: embedder.sock not found (hint: restart embedder)
 
 All good. / N issue(s) found.
@@ -48,7 +48,7 @@ All good. / N issue(s) found.
 
 | Symptom | Action |
 |---|---|
-| Daemon not running | `tsm daemon start` |
+| Daemon not running | `tsm start` |
 | Embedder down | Check logs in `{state_dir}/logs/` |
-| Vectors stale | `tsm backfill` to re-queue |
+| Vectors stale | `tsm vector-fill` to re-queue |
 | DB corrupt | `tsm rebuild --apply` |
