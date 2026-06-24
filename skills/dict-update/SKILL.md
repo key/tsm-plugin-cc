@@ -1,7 +1,7 @@
 ---
 name: the-space-memory:dict-update
 description: |
-  Curate The Space Memory's user dictionary: review tokenizer candidates and decide add vs reject, then sync synonyms.
+  Curate The Space Memory's user dictionary: review tokenizer candidates and decide add vs reject, then manage synonyms.
   Use when: user wants to improve Japanese full-text search quality, fix bad tokenization, or maintain the dictionary.
   Examples: "辞書を更新して", "the-space-memory の辞書メンテして", "検索の分かち書きを直したい",
   "辞書の候補を見せて", "シノニムを追加して", "update the knowledge dictionary", "review dict candidates".
@@ -73,10 +73,16 @@ by adjusting `--threshold` and the reject list. Therefore:
    ```
 
 6. **Synonyms (optional)** — map variants/abbreviations to a canonical
-   term in `.tsm/synonyms.csv`, then:
+   term. Add pairs directly:
 
    ```bash
-   tsm dict synonym sync
+   tsm synonym add <variant> <canonical>
+   ```
+
+   or edit `.tsm/synonyms.csv` and import it (mirrors the user subset):
+
+   ```bash
+   tsm synonym import --file .tsm/synonyms.csv
    ```
 
 ## Classification criteria
@@ -123,7 +129,8 @@ Proceed?
 | `tsm dict update --apply` | Add all current candidates + rebuild FTS — **confirm first** |
 | `tsm dict reject --apply` | Add `.tsm/reject_words.txt` words to the DB reject list (additive, case-insensitive; empty file = no-op; no un-reject) |
 | `tsm dict reject --all` | Show all currently rejected words |
-| `tsm dict synonym sync` | Sync `.tsm/synonyms.csv` to the DB |
+| `tsm synonym add <a> <b>` | Add a synonym pair to the DB |
+| `tsm synonym import --file <PATH>` | Import synonym pairs from a CSV file (mirrors the user subset) |
 
 ## Common mistakes
 
