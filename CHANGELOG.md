@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.14.1 (2026-06-24)
+
+
+### Documentation
+
+* drop the removed `index_root` term (rejected since ADR-0009 §3) in favor of
+  "project root", and fix stale command names: `tsm daemon start` -> `tsm start`,
+  `tsm backfill` -> `tsm vector-fill`. Setup now uses `tsm init`. Matches tsm 0.6.0.
+
 ## 0.14.0 (2026-06-24)
 
 

@@ -22,17 +22,18 @@ fi
 ROOT=$(resolve_root)
 cd "$ROOT"
 
-# tsm の index_root（tsm.toml、通常は main の絶対パス）からの相対パスに変換する。
-# ここでは ROOT（resolve_root = main）が index_root と一致する前提で前置を剥がす。
+# tsm のプロジェクトルート（tsm.toml の場所、通常は main の絶対パス）からの
+# 相対パスに変換する。ここでは ROOT（resolve_root = main）がプロジェクトルートと
+# 一致する前提で前置を剥がす。
 REL_PATH="${FILE#"$ROOT"/}"
 
 # ROOT 配下に変換できなかった場合（プロジェクト外のパス）はスキップ。
 #
-# 既知の制約（linked worktree）: tsm は index_root 基準でファイルを読み・格納する。
+# 既知の制約（linked worktree）: tsm はプロジェクトルート基準でファイルを読み・格納する。
 # main 配下にネストした worktree（例: .claude/worktrees/...）の編集は
 # その長いネストパスで索引され、main 側の同名 doc とは別エントリになる。
-# main 外の worktree は index_root の外なのでここで skip され索引されない。
-# worktree パスの索引除外は tsm 本体（index_root / fs-watcher）側の課題。
+# main 外の worktree はプロジェクトルートの外なのでここで skip され索引されない。
+# worktree パスの索引除外は tsm 本体（プロジェクトルート解決 / fs-watcher）側の課題。
 [ "$REL_PATH" = "$FILE" ] && exit 0
 
 echo "$REL_PATH" | "$TSM" index --files-from-stdin >/dev/null 2>&1
