@@ -1,0 +1,16 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "tsm-plugin-cc",
+  "description": "Claude Code plugin for the-space-memory (tsm) cross-workspace knowledge search",
+  "owner": {
+    "name": "Mitsukuni Sato"
+  },
+  "plugins": [
+    {
+      "name": "the-space-memory",
+      "description": "Cross-workspace knowledge search engine with hybrid FTS5 + vector search",
+      "category": "productivity",
+      "source": "./"
+    }
+  ]
+}

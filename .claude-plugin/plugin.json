@@ -1,0 +1,18 @@
+{
+  "name": "the-space-memory",
+  "description": "Cross-workspace knowledge search engine with hybrid FTS5 + vector search",
+  "version": "0.13.0",
+  "author": {
+    "name": "Mitsukuni Sato"
+  },
+  "repository": "https://github.com/key/tsm-plugin-cc",
+  "license": "MIT",
+  "keywords": [
+    "knowledge",
+    "search",
+    "fts5",
+    "vector",
+    "rag",
+    "japanese"
+  ]
+}
