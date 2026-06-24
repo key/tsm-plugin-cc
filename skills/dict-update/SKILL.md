@@ -60,6 +60,21 @@ by adjusting `--threshold` and the reject list. Therefore:
    a word from the file does not un-reject it. There is no CLI un-reject;
    clearing the list requires `tsm rebuild`.
 
+   **Reject ≠ unsearchable.** Rejecting only drops a word from the
+   user-dictionary candidate pipeline (frequency stops accumulating). It does
+   **not** remove the term from the FTS index — ASCII acronyms like `CAN`,
+   `API`, `JST` stay searchable via the default tokenizer even when rejected.
+   So rejecting their lowercase forms is safe for recall; don't skip a
+   stopword reject for fear of "losing" the uppercase domain term.
+
+   **Rejected words reappearing as candidates?** If the dry run still lists
+   words that are already in `reject_words.txt` (e.g. `the`, `https`), the list
+   is not synced to the DB. `tsm rebuild --apply` **resets the DB reject list**,
+   so the file is the source of truth but must be re-applied. Confirm with
+   `tsm dict reject --all` (or the rejected count in `tsm doctor`): if it is
+   empty/small while `reject_words.txt` is large, re-run `tsm dict reject
+   --apply` to re-sync — that alone can cut thousands of stale candidates.
+
 4. **Re-run the dry run** and confirm only the ADD words remain:
 
    ```bash

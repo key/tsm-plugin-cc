@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.14.2 (2026-06-24)
+
+
+### Documentation
+
+* **dict-update:** document two field-tested gotchas — `rebuild --apply` resets
+  the DB reject list (so `reject_words.txt` can silently desync; re-run
+  `tsm dict reject --apply`), and reject is dictionary-pipeline housekeeping, not
+  FTS deletion (rejected ASCII acronyms stay searchable).
+* **doctor:** show the `Build` (`Version` / `Built`) section in the example so a
+  stale `tsm` is obvious (pairs with the-space-memory#265).
+
 ## 0.14.1 (2026-06-24)
 
 
