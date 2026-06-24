@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.14.0 (2026-06-24)
+
+
+### Features
+
+* **dict-update:** document the top-level `tsm synonym` commands (`add` / `import`),
+  replacing the removed `tsm dict synonym sync`. Requires tsm >= 0.7.0, where the
+  `tsm synonym` split lands ([the-space-memory#247](https://github.com/key/the-space-memory/pull/247)).
+
 ## [0.13.0](https://github.com/key/claude-code-plugins/compare/the-space-memory-v0.12.2...the-space-memory-v0.13.0) (2026-06-22)
 
 
