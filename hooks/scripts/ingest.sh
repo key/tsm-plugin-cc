@@ -37,4 +37,6 @@ JSONL_FILE="$SESSIONS_DIR/$SESSION_ID.jsonl"
 
 [ ! -f "$JSONL_FILE" ] && exit 0
 
-"$TSM" ingest-session "$JSONL_FILE" >/dev/null 2>&1
+# stdout のみ抑制する。stderr はフックログで失敗を診断できるよう残す
+# （Stop フックの失敗は non-blocking なので、表面化させても安全）。
+"$TSM" ingest-session "$JSONL_FILE" >/dev/null

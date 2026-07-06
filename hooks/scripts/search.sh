@@ -42,8 +42,11 @@ fi
 . "$(dirname "$0")/resolve-root.sh"
 cd "$(resolve_root)"
 
-# 検索実行（tsmd が未起動なら自動起動される）
-RESULT=$("$TSM" search --query "$QUERY" --format json 2>>"$LOG") || {
+# 検索実行（tsmd が未起動なら自動起動される）。
+# stderr は $LOG（TSM_HOOK_DEBUG 未設定なら /dev/null）に加え、常にこのスクリプト
+# 自身の stderr にも tee する。フックの失敗は non-blocking なので、
+# TSM_HOOK_DEBUG 抜きでもフックログで診断できるよう表面化させる。
+RESULT=$("$TSM" search --query "$QUERY" --format json 2> >(tee -a "$LOG" >&2)) || {
   log "FAIL: tsm search exited with $?"
   exit 0
 }
