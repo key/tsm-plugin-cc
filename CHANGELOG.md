@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.3](https://github.com/key/tsm-plugin-cc/compare/v0.14.2...v0.14.3) (2026-07-06)
+
+
+### Bug Fixes
+
+* **hooks:** anchor resolve_root to CLAUDE_PROJECT_DIR, not hook cwd ([#8](https://github.com/key/tsm-plugin-cc/issues/8)) ([57e43ef](https://github.com/key/tsm-plugin-cc/commit/57e43ef68f45655ba89254deef56d69bd2f22373))
+
 ## 0.14.2 (2026-06-24)
 
 
