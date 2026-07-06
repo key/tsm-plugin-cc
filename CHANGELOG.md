@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.4](https://github.com/key/tsm-plugin-cc/compare/v0.14.3...v0.14.4) (2026-07-06)
+
+
+### Miscellaneous Chores
+
+* release 0.14.4 ([#11](https://github.com/key/tsm-plugin-cc/issues/11)) ([fb32d1b](https://github.com/key/tsm-plugin-cc/commit/fb32d1ba4aafb4f3eeb9ff7d9ff97407c134646a))
+
 ## [0.14.3](https://github.com/key/tsm-plugin-cc/compare/v0.14.2...v0.14.3) (2026-07-06)
 
 
