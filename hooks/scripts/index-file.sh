@@ -36,4 +36,6 @@ REL_PATH="${FILE#"$ROOT"/}"
 # worktree パスの索引除外は tsm 本体（プロジェクトルート解決 / fs-watcher）側の課題。
 [ "$REL_PATH" = "$FILE" ] && exit 0
 
-echo "$REL_PATH" | "$TSM" index --files-from-stdin >/dev/null 2>&1
+# stdout のみ抑制する。stderr はフックログで失敗を診断できるよう残す
+# （PostToolUse フックの失敗は non-blocking なので、表面化させても安全）。
+echo "$REL_PATH" | "$TSM" index --files-from-stdin >/dev/null

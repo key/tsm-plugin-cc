@@ -49,3 +49,21 @@ setup() {
   [ "$status" -eq 0 ]
   [ "$(cd "$output" && pwd -P)" = "$(cd "$main" && pwd -P)" ]
 }
+
+@test "resolve_root anchors on CLAUDE_PROJECT_DIR (a linked worktree) even when the hook's cwd is outside any git repo" {
+  # Claude Code invokes hooks with a cwd that is not the project (e.g. it may
+  # not be under git management at all). resolve_root must still anchor its
+  # git lookup to CLAUDE_PROJECT_DIR (via `git -C`), not to $PWD, or it falls
+  # through to returning the worktree path itself — which has no .tsm state.
+  main="$BATS_TEST_TMPDIR/main"
+  wt="$BATS_TEST_TMPDIR/wt"
+  nongit="$BATS_TEST_TMPDIR/nongit"
+  mkdir -p "$nongit"
+  git init -q "$main"
+  git -C "$main" -c user.email=t@t -c user.name=t commit -q --allow-empty -m init
+  git -C "$main" worktree add -q "$wt" >/dev/null 2>&1
+  run env CLAUDE_PROJECT_DIR="$wt" bash -c \
+    ". '$SCRIPTS/resolve-root.sh'; cd '$nongit' && resolve_root"
+  [ "$status" -eq 0 ]
+  [ "$(cd "$output" && pwd -P)" = "$(cd "$main" && pwd -P)" ]
+}
