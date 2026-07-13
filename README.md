@@ -74,6 +74,7 @@ git の common-dir の親（linked worktree からでも main を指す）→
 | 変数 | 既定 | 意味 |
 |---|---|---|
 | `TSM_SNIPPET_BUDGET` | `1000` | 検索スニペットの合計文字数の上限 |
+| `TSM_SEARCH_TIMEOUT` | `3` | 検索フックの打ち切り秒数。ハード上限 **10 秒**（超える値は 10 に丸める）。`0`／非数値で内部打ち切りを無効化するが、その場合もフック機構側の `timeout`（10 秒）が上限として残る |
 | `TSM_HOOK_DEBUG` | （未設定） | セット時のみデバッグログを出力（後述） |
 
 `TSM_HOOK_DEBUG` をセットすると `search.sh` が

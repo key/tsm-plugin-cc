@@ -17,6 +17,56 @@ setup() {
   [ "$status" -eq 0 ]
 }
 
+@test "search exits 0 when killed by SIGTERM mid-search (non-blocking contract)" {
+  # フックは best-effort・non-blocking。検索中にフック機構が SIGTERM で打ち切っても
+  # 非0を返してはならない（非0はフックを失敗扱いにさせ、内部タイムアウト導入の趣旨
+  # である「静かに劣化」を壊す）。TERM trap が exit 0 で抜けることを守る回帰テスト。
+  fakebin="$BATS_TEST_TMPDIR/bin"
+  mkdir -p "$fakebin"
+  # `search` でハングする偽 tsm。自分の PID を記録し、開始を通知してから待つ
+  # （テストの決定性のため）。\$\$ は偽 tsm の実行時 PID に展開させる。
+  cat > "$fakebin/tsm" <<SH
+#!/usr/bin/env bash
+echo \$\$ > "$BATS_TEST_TMPDIR/tsm_pid"
+touch "$BATS_TEST_TMPDIR/tsm_started"
+sleep 5
+SH
+  chmod +x "$fakebin/tsm"
+
+  repo="$BATS_TEST_TMPDIR/repo"
+  git init -q "$repo"
+  git -C "$repo" -c user.email=t@t -c user.name=t commit -q --allow-empty -m init
+
+  # 内部ウォッチドッグは発火させず（高い timeout・クランプで 10s）、代わりに SIGTERM
+  # を送る。fd 3 を閉じて起動するのは、背景の孤児プロセスが bats の出力 fd を掴んで
+  # テスト実行をハングさせないため（bats の定石）。
+  PATH="$fakebin:$PATH" CLAUDE_PROJECT_DIR="$repo" TSM_SEARCH_TIMEOUT=30 \
+    bash "$SCRIPTS/search.sh" >/dev/null 2>&1 3>&- <<< '{"prompt":"regression query for signal handling"}' &
+  local pid=$!
+
+  # 偽 tsm が動き出す＝TERM trap 設置済みになるまで待ってから TERM する。
+  for _ in $(seq 1 50); do
+    [ -e "$BATS_TEST_TMPDIR/tsm_started" ] && break
+    sleep 0.1
+  done
+  kill -TERM "$pid"
+
+  # 契約: 親フックは exit 0 で抜ける。
+  local status=0
+  wait "$pid" || status=$?
+  [ "$status" -eq 0 ]
+
+  # 契約: 進行中の検索（子）を孤児として残さない。
+  local tsm_pid
+  tsm_pid="$(cat "$BATS_TEST_TMPDIR/tsm_pid")"
+  local dead=0
+  for _ in $(seq 1 30); do
+    if ! kill -0 "$tsm_pid" 2>/dev/null; then dead=1; break; fi
+    sleep 0.1
+  done
+  [ "$dead" -eq 1 ]
+}
+
 @test "ingest skips when session_id is missing" {
   run bash "$SCRIPTS/ingest.sh" <<< '{}'
   [ "$status" -eq 0 ]
