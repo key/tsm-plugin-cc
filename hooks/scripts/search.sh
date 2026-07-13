@@ -48,6 +48,14 @@ cd "$(resolve_root)"
 # ランタイムも環境依存で当てにできないため、POSIX の sleep/kill だけで実装する。
 SEARCH_TIMEOUT="${TSM_SEARCH_TIMEOUT:-3}"
 
+# ハード上限 10 秒。hooks.json のフック機構 timeout と同値で、それを超える設定は
+# 無意味（機構側が SIGTERM で強制打ち切りし graceful 経路を通らない）ため、内部
+# ウォッチドッグ側で 10 秒に丸める。これで env の値に関わらず最大 10 秒を保証する。
+SEARCH_TIMEOUT_MAX=10
+if [ "$SEARCH_TIMEOUT" -gt "$SEARCH_TIMEOUT_MAX" ] 2>/dev/null; then
+  SEARCH_TIMEOUT="$SEARCH_TIMEOUT_MAX"
+fi
+
 # 検索実行（tsmd が未起動なら自動起動される）。stderr は $LOG（TSM_HOOK_DEBUG
 # 未設定なら /dev/null）と自スクリプトの stderr の双方へ tee する。フック失敗は
 # non-blocking なので、TSM_HOOK_DEBUG 抜きでもログで診断できるよう表面化させる。
@@ -61,21 +69,37 @@ if [ "$SEARCH_TIMEOUT" -gt 0 ] 2>/dev/null; then
     log "FAIL: mktemp failed"
     exit 0
   }
-  # フック機構の上限で kill されても一時ファイルを残さないよう trap で掃除する。
-  trap 'rm -f "$SEARCH_OUT"' EXIT
+  # 監視役が発火した事実はセンチネルファイルで記録する。SEARCH_RC>=128 での判定は
+  # SIGSEGV(139)/OOM kill(137) 等あらゆるシグナル死を打ち切りと誤認し、クラッシュを
+  # TIMEOUT と誤記録してデバッグを誤誘導するため使わない。
+  TIMED_OUT="$SEARCH_OUT.timedout"
+  # 一時ファイルは通常終了・内部 exit 経路で EXIT trap が掃除する。フック機構が
+  # 上限超過を SIGTERM で打ち切る場合にも備え TERM/INT も捕捉するが、SIGKILL は
+  # 捕捉不可なので、その経路でのみ残存しうる（OS が TMPDIR を回収する）。
+  trap 'rm -f "$SEARCH_OUT" "$TIMED_OUT"' EXIT
+  trap 'rm -f "$SEARCH_OUT" "$TIMED_OUT"; exit 143' TERM INT
   "$TSM" search --query "$QUERY" --format json >"$SEARCH_OUT" 2> >(tee -a "$LOG" >&2) &
   SEARCH_PID=$!
-  ( sleep "$SEARCH_TIMEOUT"; kill -TERM "$SEARCH_PID" 2>/dev/null ) >/dev/null 2>&1 &
+  # 監視役はセンチネルを立ててから TERM を送る（flag→TERM の順で、TERM 後に wait が
+  # 返る時点で必ず flag が見える）。tsm search は TERM に素直に応じる協調クライアント
+  # なので KILL エスカレートはしない（猶予 sleep は打ち切りごとに遅延を上乗せするうえ、
+  # 既に終了した PID への遅延 KILL は PID 再利用の的になる）。ハングの最終上限は
+  # フック機構側の 10 秒が担う。
+  ( sleep "$SEARCH_TIMEOUT"; : >"$TIMED_OUT"; kill -TERM "$SEARCH_PID" 2>/dev/null ) >/dev/null 2>&1 &
   WATCH_PID=$!
   if wait "$SEARCH_PID" 2>/dev/null; then SEARCH_RC=0; else SEARCH_RC=$?; fi
   kill -TERM "$WATCH_PID" 2>/dev/null || true
   wait "$WATCH_PID" 2>/dev/null || true
-  # cat 失敗時は空結果として扱い、下流の空判定で graceful に抜ける。
-  RESULT=$(cat "$SEARCH_OUT") || RESULT=""
+  # cat 失敗は「本当に空」と区別してログに残す（診断性）。結果は空として続行。
+  if ! RESULT=$(cat "$SEARCH_OUT"); then
+    log "FAIL: could not read search output"
+    RESULT=""
+  fi
   if [ "$SEARCH_RC" -ne 0 ]; then
-    # 128+ は監視役の TERM（＝打ち切り）。それ以外は tsm 自体の失敗。
-    if [ "$SEARCH_RC" -ge 128 ]; then
+    if [ -e "$TIMED_OUT" ]; then
       log "TIMEOUT: tsm search exceeded ${SEARCH_TIMEOUT}s"
+    elif [ "$SEARCH_RC" -ge 128 ]; then
+      log "FAIL: tsm search terminated by signal $((SEARCH_RC - 128))"
     else
       log "FAIL: tsm search exited with $SEARCH_RC"
     fi
