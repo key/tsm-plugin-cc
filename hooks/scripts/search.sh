@@ -55,7 +55,14 @@ if [ "$SEARCH_TIMEOUT" -gt 0 ] 2>/dev/null; then
   # tsm を背景実行し、監視プロセスが SEARCH_TIMEOUT 秒後に TERM する。時間内に
   # 終われば監視役を止める。結果は一時ファイル経由で受け取り、背景プロセスが
   # コマンド置換のパイプを掴んで置換完了を遅延させないようにする。
-  SEARCH_OUT=$(mktemp "${TMPDIR:-/tmp}/tsm-search.XXXXXX")
+  # mktemp 失敗（書き込み不可な TMPDIR 等）でも他の失敗経路と同じく graceful に
+  # exit 0 する。set -eu 下の bare 代入は失敗時にスクリプトを異常終了させるため。
+  SEARCH_OUT=$(mktemp "${TMPDIR:-/tmp}/tsm-search.XXXXXX") || {
+    log "FAIL: mktemp failed"
+    exit 0
+  }
+  # フック機構の上限で kill されても一時ファイルを残さないよう trap で掃除する。
+  trap 'rm -f "$SEARCH_OUT"' EXIT
   "$TSM" search --query "$QUERY" --format json >"$SEARCH_OUT" 2> >(tee -a "$LOG" >&2) &
   SEARCH_PID=$!
   ( sleep "$SEARCH_TIMEOUT"; kill -TERM "$SEARCH_PID" 2>/dev/null ) >/dev/null 2>&1 &
@@ -63,8 +70,8 @@ if [ "$SEARCH_TIMEOUT" -gt 0 ] 2>/dev/null; then
   if wait "$SEARCH_PID" 2>/dev/null; then SEARCH_RC=0; else SEARCH_RC=$?; fi
   kill -TERM "$WATCH_PID" 2>/dev/null || true
   wait "$WATCH_PID" 2>/dev/null || true
-  RESULT=$(cat "$SEARCH_OUT")
-  rm -f "$SEARCH_OUT"
+  # cat 失敗時は空結果として扱い、下流の空判定で graceful に抜ける。
+  RESULT=$(cat "$SEARCH_OUT") || RESULT=""
   if [ "$SEARCH_RC" -ne 0 ]; then
     # 128+ は監視役の TERM（＝打ち切り）。それ以外は tsm 自体の失敗。
     if [ "$SEARCH_RC" -ge 128 ]; then
