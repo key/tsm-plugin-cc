@@ -42,14 +42,44 @@ fi
 . "$(dirname "$0")/resolve-root.sh"
 cd "$(resolve_root)"
 
-# 検索実行（tsmd が未起動なら自動起動される）。
-# stderr は $LOG（TSM_HOOK_DEBUG 未設定なら /dev/null）に加え、常にこのスクリプト
-# 自身の stderr にも tee する。フックの失敗は non-blocking なので、
-# TSM_HOOK_DEBUG 抜きでもフックログで診断できるよう表面化させる。
-RESULT=$("$TSM" search --query "$QUERY" --format json 2> >(tee -a "$LOG" >&2)) || {
-  log "FAIL: tsm search exited with $?"
-  exit 0
-}
+# 検索タイムアウト（秒）。プロンプト投入ごとに走るフックなので、遅い検索が
+# 入力の体感を損なわないよう既定 3 秒で打ち切る。TSM_SEARCH_TIMEOUT で上書き可
+# （0 または非数値で無効化）。timeout(1) は macOS 標準に無く、perl/python 等の
+# ランタイムも環境依存で当てにできないため、POSIX の sleep/kill だけで実装する。
+SEARCH_TIMEOUT="${TSM_SEARCH_TIMEOUT:-3}"
+
+# 検索実行（tsmd が未起動なら自動起動される）。stderr は $LOG（TSM_HOOK_DEBUG
+# 未設定なら /dev/null）と自スクリプトの stderr の双方へ tee する。フック失敗は
+# non-blocking なので、TSM_HOOK_DEBUG 抜きでもログで診断できるよう表面化させる。
+if [ "$SEARCH_TIMEOUT" -gt 0 ] 2>/dev/null; then
+  # tsm を背景実行し、監視プロセスが SEARCH_TIMEOUT 秒後に TERM する。時間内に
+  # 終われば監視役を止める。結果は一時ファイル経由で受け取り、背景プロセスが
+  # コマンド置換のパイプを掴んで置換完了を遅延させないようにする。
+  SEARCH_OUT=$(mktemp "${TMPDIR:-/tmp}/tsm-search.XXXXXX")
+  "$TSM" search --query "$QUERY" --format json >"$SEARCH_OUT" 2> >(tee -a "$LOG" >&2) &
+  SEARCH_PID=$!
+  ( sleep "$SEARCH_TIMEOUT"; kill -TERM "$SEARCH_PID" 2>/dev/null ) >/dev/null 2>&1 &
+  WATCH_PID=$!
+  if wait "$SEARCH_PID" 2>/dev/null; then SEARCH_RC=0; else SEARCH_RC=$?; fi
+  kill -TERM "$WATCH_PID" 2>/dev/null || true
+  wait "$WATCH_PID" 2>/dev/null || true
+  RESULT=$(cat "$SEARCH_OUT")
+  rm -f "$SEARCH_OUT"
+  if [ "$SEARCH_RC" -ne 0 ]; then
+    # 128+ は監視役の TERM（＝打ち切り）。それ以外は tsm 自体の失敗。
+    if [ "$SEARCH_RC" -ge 128 ]; then
+      log "TIMEOUT: tsm search exceeded ${SEARCH_TIMEOUT}s"
+    else
+      log "FAIL: tsm search exited with $SEARCH_RC"
+    fi
+    exit 0
+  fi
+else
+  RESULT=$("$TSM" search --query "$QUERY" --format json 2> >(tee -a "$LOG" >&2)) || {
+    log "FAIL: tsm search exited with $?"
+    exit 0
+  }
+fi
 
 # 結果が空なら何も出力しない
 if [ -z "$RESULT" ] || [ "$RESULT" = "null" ]; then
