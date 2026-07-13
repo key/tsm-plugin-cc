@@ -76,8 +76,10 @@ if [ "$SEARCH_TIMEOUT" -gt 0 ] 2>/dev/null; then
   # 一時ファイルは通常終了・内部 exit 経路で EXIT trap が掃除する。フック機構が
   # 上限超過を SIGTERM で打ち切る場合にも備え TERM/INT も捕捉するが、SIGKILL は
   # 捕捉不可なので、その経路でのみ残存しうる（OS が TMPDIR を回収する）。
+  # 打ち切られても exit 0 で抜ける（非0はフックを失敗扱いにさせ、best-effort・
+  # non-blocking の契約を破るため）。
   trap 'rm -f "$SEARCH_OUT" "$TIMED_OUT"' EXIT
-  trap 'rm -f "$SEARCH_OUT" "$TIMED_OUT"; exit 143' TERM INT
+  trap 'rm -f "$SEARCH_OUT" "$TIMED_OUT"; exit 0' TERM INT
   "$TSM" search --query "$QUERY" --format json >"$SEARCH_OUT" 2> >(tee -a "$LOG" >&2) &
   SEARCH_PID=$!
   # 監視役はセンチネルを立ててから TERM を送る（flag→TERM の順で、TERM 後に wait が
