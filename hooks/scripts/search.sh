@@ -74,12 +74,21 @@ if [ "$SEARCH_TIMEOUT" -gt 0 ] 2>/dev/null; then
   # TIMEOUT と誤記録してデバッグを誤誘導するため使わない。
   TIMED_OUT="$SEARCH_OUT.timedout"
   # 一時ファイルは通常終了・内部 exit 経路で EXIT trap が掃除する。フック機構が
-  # 上限超過を SIGTERM で打ち切る場合にも備え TERM/INT も捕捉するが、SIGKILL は
-  # 捕捉不可なので、その経路でのみ残存しうる（OS が TMPDIR を回収する）。
-  # 打ち切られても exit 0 で抜ける（非0はフックを失敗扱いにさせ、best-effort・
-  # non-blocking の契約を破るため）。
+  # 上限超過を SIGTERM で打ち切る場合にも備え TERM/INT を捕捉し、進行中の検索と
+  # 監視役も停止してから exit 0 で抜ける（SIGKILL は捕捉不可）。exit 0 なのは、
+  # 非0がフックを失敗扱いにさせ best-effort・non-blocking の契約を破るため。子を
+  # 止めるのは、打ち切り後に tsm search が孤児として走り続けたり、監視役が終了済み
+  # PID を遅延 kill するのを防ぐため（PID 未設定の窓に備え空初期化して参照を守る）。
+  SEARCH_PID=
+  WATCH_PID=
+  _on_signal() {
+    if [ -n "$SEARCH_PID" ]; then kill -TERM "$SEARCH_PID" 2>/dev/null || true; fi
+    if [ -n "$WATCH_PID" ]; then kill -TERM "$WATCH_PID" 2>/dev/null || true; fi
+    rm -f "$SEARCH_OUT" "$TIMED_OUT"
+    exit 0
+  }
   trap 'rm -f "$SEARCH_OUT" "$TIMED_OUT"' EXIT
-  trap 'rm -f "$SEARCH_OUT" "$TIMED_OUT"; exit 0' TERM INT
+  trap _on_signal TERM INT
   "$TSM" search --query "$QUERY" --format json >"$SEARCH_OUT" 2> >(tee -a "$LOG" >&2) &
   SEARCH_PID=$!
   # 監視役はセンチネルを立ててから TERM を送る（flag→TERM の順で、TERM 後に wait が
