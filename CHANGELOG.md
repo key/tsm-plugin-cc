@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.0](https://github.com/key/tsm-plugin-cc/compare/v0.14.4...v0.15.0) (2026-07-13)
+
+
+### Features
+
+* **hooks:** make search-injection timeout configurable, default 3s ([#13](https://github.com/key/tsm-plugin-cc/issues/13)) ([50313c9](https://github.com/key/tsm-plugin-cc/commit/50313c92ed7ad1ba5e1394f3e29af202160413f8))
+
 ## [0.14.4](https://github.com/key/tsm-plugin-cc/compare/v0.14.3...v0.14.4) (2026-07-06)
 
 
